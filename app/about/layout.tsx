@@ -1,16 +1,19 @@
 import type React from "react"
 import type { Metadata } from "next"
+import { SHARE_IMAGE } from "@/lib/site"
 
 export const metadata: Metadata = {
-  title: "About Sneha Durgkar — Communication & Soft Skills Trainer",
+  title: "About Sneha Durgkar — Soft Skills Trainer",
   description:
-    "Meet Sneha Durgkar, certified communication and soft skills trainer with 8+ years of experience and founder of Eleva Academy. Diplomas in soft skills, business communication and HR.",
+    "Meet Sneha Durgkar, founder of Eleva Academy: communication and soft skills trainer with a PGDM, 10+ years in education and 8+ years of training.",
   alternates: { canonical: "/about" },
   openGraph: {
     title: "About Sneha Durgkar — Communication & Soft Skills Trainer",
     description:
-      "Certified trainer with 8+ years of experience helping students and professionals communicate with confidence.",
+      "Founder of Eleva Academy with 10+ years in education and 8+ years of training — helping students and professionals communicate with confidence.",
     url: "/about",
+    type: "profile",
+    images: [SHARE_IMAGE],
   },
 }
 

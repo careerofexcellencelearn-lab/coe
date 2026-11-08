@@ -16,6 +16,7 @@ import {
   FileImage,
   FileText,
   FolderOpen,
+  Inbox,
   Mail,
   MessageCircle,
   Pencil,
@@ -134,6 +135,22 @@ type Certificate = {
   path: string
   uploadedAt: string
 }
+
+type Enquiry = {
+  id: string
+  kind: "demo" | "enquiry"
+  name: string
+  phone: string
+  email: string
+  program: string
+  contactMethod: "" | "phone" | "whatsapp" | "email"
+  preferredTime: string
+  message: string
+  status: "new" | "contacted" | "closed"
+  createdAt: string
+}
+
+type ListKind = "services" | "registrations" | "materials" | "certificates" | "stories" | "enquiries"
 
 type AdminSession = { token: string; email: string }
 
@@ -455,6 +472,9 @@ export default function AdminPage() {
   const [savingContact, setSavingContact] = useState(false)
   const [contactSaved, setContactSaved] = useState(false)
   const [tab, setTab] = useState("registrations")
+  const [enquiries, setEnquiries] = useState<Enquiry[]>([])
+  const [enquiriesError, setEnquiriesError] = useState("")
+  const [enquiryFilter, setEnquiryFilter] = useState<"all" | Enquiry["status"]>("all")
   const [editingId, setEditingId] = useState<string | null>(null)
   const [creating, setCreating] = useState(false)
   const [actionError, setActionError] = useState("")
@@ -488,34 +508,85 @@ export default function AdminPage() {
     [session],
   )
 
+  const expireSession = useCallback(() => {
+    localStorage.removeItem(SESSION_KEY)
+    setSession(null)
+  }, [])
+
+  const applyList = useCallback((kind: ListKind, data: any) => {
+    if (kind === "services") setServices(data.services ?? [])
+    if (kind === "registrations") setRegistrations(data.registrations ?? [])
+    if (kind === "materials") setMaterials(data.materials ?? [])
+    if (kind === "certificates") setCertificates(data.certificates ?? [])
+    if (kind === "stories") setStories(data.testimonials ?? [])
+    if (kind === "enquiries") setEnquiries(data.enquiries ?? [])
+  }, [])
+
+  const listUrl = (kind: ListKind) => `/api/${kind === "stories" ? "testimonials" : kind}`
+
+  /** Re-fetch only the lists an action changed (not the whole dashboard) */
+  const reload = useCallback(
+    async (...kinds: ListKind[]) => {
+      await Promise.all(
+        kinds.map(async (kind) => {
+          const res = await authFetch(listUrl(kind)).catch(() => null)
+          if (!res) return
+          if (res.status === 401) return expireSession()
+          if (res.ok) applyList(kind, await res.json())
+        }),
+      )
+    },
+    [authFetch, applyList, expireSession],
+  )
+
   const loadData = useCallback(async () => {
     if (!session) return
     setActionError("")
-    const [servicesRes, registrationsRes, materialsRes, certificatesRes, storiesRes, aboutRes, contactRes] =
-      await Promise.all([
-        authFetch("/api/services"),
-        authFetch("/api/registrations"),
-        authFetch("/api/materials"),
-        authFetch("/api/certificates"),
-        authFetch("/api/testimonials"),
-        authFetch("/api/about"),
-        authFetch("/api/contact"),
-      ])
-    if (registrationsRes.status === 401) {
-      localStorage.removeItem(SESSION_KEY)
-      setSession(null)
-      return
-    }
-    setServices((await servicesRes.json()).services ?? [])
-    setRegistrations((await registrationsRes.json()).registrations ?? [])
-    setMaterials((await materialsRes.json()).materials ?? [])
-    setCertificates((await certificatesRes.json()).certificates ?? [])
-    setStories((await storiesRes.json()).testimonials ?? [])
-    const aboutData = (await aboutRes.json()).about
+    const kinds: ListKind[] = ["services", "registrations", "materials", "certificates", "stories", "enquiries"]
+    const [listResponses, aboutRes, contactRes] = await Promise.all([
+      Promise.all(kinds.map((kind) => authFetch(listUrl(kind)).catch(() => null))),
+      authFetch("/api/about").catch(() => null),
+      authFetch("/api/contact").catch(() => null),
+    ])
+    if (listResponses[1]?.status === 401) return expireSession()
+    await Promise.all(
+      listResponses.map(async (res, i) => {
+        if (res?.ok) applyList(kinds[i], await res.json())
+        else if (kinds[i] === "enquiries")
+          setEnquiriesError(
+            "Enquiries could not be loaded. If this is a new setup, the enquiries database table still needs to be created (see the setup notes).",
+          )
+      }),
+    )
+    if (listResponses[5]?.ok) setEnquiriesError("")
+    const aboutData = aboutRes?.ok ? (await aboutRes.json()).about : null
     if (aboutData?.bio?.length) setAboutForm(aboutToForm(aboutData))
-    const contactData = (await contactRes.json()).contact
+    const contactData = contactRes?.ok ? (await contactRes.json()).contact : null
     if (contactData?.email) setContactForm({ ...DEFAULT_CONTACT, ...contactData })
-  }, [session, authFetch])
+  }, [session, authFetch, applyList, expireSession])
+
+  /**
+   * Optimistic action: update the screen immediately, save in the background,
+   * and roll the change back (with an error message) only if the save fails.
+   */
+  const optimistic = useCallback(
+    async (apply: () => () => void, request: () => Promise<Response>, failMessage: string) => {
+      setActionError("")
+      const undo = apply()
+      try {
+        const res = await request()
+        if (res.status === 401) return expireSession()
+        if (!res.ok) {
+          undo()
+          setActionError((await res.json().catch(() => ({}))).error ?? failMessage)
+        }
+      } catch {
+        undo()
+        setActionError("Network error — the change was not saved. Please try again.")
+      }
+    },
+    [expireSession],
+  )
 
   useEffect(() => {
     loadData()
@@ -562,7 +633,7 @@ export default function AdminPage() {
     })
     if (res.ok) {
       setCreating(false)
-      await loadData()
+      await reload("services")
     } else {
       setActionError((await res.json()).error ?? "Could not create service.")
     }
@@ -576,36 +647,95 @@ export default function AdminPage() {
     })
     if (res.ok) {
       setEditingId(null)
-      await loadData()
+      await reload("services")
     } else {
       setActionError((await res.json()).error ?? "Could not update service.")
     }
   }
 
-  const removeOffer = async (id: string) => {
-    await authFetch(`/api/services/${id}`, {
-      method: "PUT",
-      headers: jsonHeaders,
-      body: JSON.stringify({ offerPrice: null, offerLabel: "" }),
-    })
-    await loadData()
+  const removeOffer = (id: string) => {
+    const before = services.find((sv) => sv.id === id)
+    return optimistic(
+      () => {
+        setServices((list) => list.map((sv) => (sv.id === id ? { ...sv, offerPrice: null, offerLabel: "" } : sv)))
+        return () => before && setServices((list) => list.map((sv) => (sv.id === id ? before : sv)))
+      },
+      () =>
+        authFetch(`/api/services/${id}`, {
+          method: "PUT",
+          headers: jsonHeaders,
+          body: JSON.stringify({ offerPrice: null, offerLabel: "" }),
+        }),
+      "Could not remove the offer.",
+    )
   }
 
   const deleteService = async (id: string, title: string) => {
     if (!window.confirm(`Delete "${title}"? This also removes its registrations.`)) return
-    await authFetch(`/api/services/${id}`, { method: "DELETE" })
-    await loadData()
+    const before = services
+    await optimistic(
+      () => {
+        setServices((list) => list.filter((sv) => sv.id !== id))
+        return () => setServices(before)
+      },
+      () => authFetch(`/api/services/${id}`, { method: "DELETE" }),
+      "Could not delete the program.",
+    )
+    reload("registrations", "materials")
   }
 
-  const patchRegistration = async (id: string, patch: { status?: string; paid?: boolean }) => {
-    await authFetch(`/api/registrations/${id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify(patch) })
-    await loadData()
+  const patchRegistration = (id: string, patch: { status?: "pending" | "approved"; paid?: boolean }) => {
+    const before = registrations.find((r) => r.id === id)
+    return optimistic(
+      () => {
+        setRegistrations((list) => list.map((r) => (r.id === id ? { ...r, ...patch } : r)))
+        return () =>
+          before &&
+          setRegistrations((list) =>
+            list.map((r) => (r.id === id ? { ...r, status: before.status, paid: before.paid } : r)),
+          )
+      },
+      () => authFetch(`/api/registrations/${id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify(patch) }),
+      "Could not update the registration.",
+    )
   }
 
   const deleteRegistration = async (id: string, name: string) => {
     if (!window.confirm(`Delete registration of ${name}?`)) return
-    await authFetch(`/api/registrations/${id}`, { method: "DELETE" })
-    await loadData()
+    const before = registrations
+    await optimistic(
+      () => {
+        setRegistrations((list) => list.filter((r) => r.id !== id))
+        return () => setRegistrations(before)
+      },
+      () => authFetch(`/api/registrations/${id}`, { method: "DELETE" }),
+      "Could not delete the registration.",
+    )
+  }
+
+  const patchEnquiry = (id: string, status: Enquiry["status"]) => {
+    const before = enquiries.find((e) => e.id === id)
+    return optimistic(
+      () => {
+        setEnquiries((list) => list.map((e) => (e.id === id ? { ...e, status } : e)))
+        return () => before && setEnquiries((list) => list.map((e) => (e.id === id ? { ...e, status: before.status } : e)))
+      },
+      () => authFetch(`/api/enquiries/${id}`, { method: "PATCH", headers: jsonHeaders, body: JSON.stringify({ status }) }),
+      "Could not update the enquiry.",
+    )
+  }
+
+  const deleteEnquiry = async (id: string, name: string) => {
+    if (!window.confirm(`Delete the enquiry from ${name}?`)) return
+    const before = enquiries
+    await optimistic(
+      () => {
+        setEnquiries((list) => list.filter((e) => e.id !== id))
+        return () => setEnquiries(before)
+      },
+      () => authFetch(`/api/enquiries/${id}`, { method: "DELETE" }),
+      "Could not delete the enquiry.",
+    )
   }
 
   const uploadMaterial = async (serviceId: string, file: File) => {
@@ -619,7 +749,7 @@ export default function AdminPage() {
       if (!res.ok) {
         setActionError((await res.json()).error ?? "Upload failed.")
       }
-      await loadData()
+      await reload("materials")
     } finally {
       setUploadingFor(null)
       const input = fileInputs.current[serviceId]
@@ -629,22 +759,41 @@ export default function AdminPage() {
 
   const deleteMaterial = async (id: string, name: string) => {
     if (!window.confirm(`Delete "${name}"?`)) return
-    await authFetch(`/api/materials/${id}`, { method: "DELETE" })
-    await loadData()
+    const before = materials
+    await optimistic(
+      () => {
+        setMaterials((list) => list.filter((m) => m.id !== id))
+        return () => setMaterials(before)
+      },
+      () => authFetch(`/api/materials/${id}`, { method: "DELETE" }),
+      "Could not delete the material.",
+    )
   }
 
-  // Toggle a student's present/absent mark for a specific day
-  const markAttendance = async (registrationId: string, date: string, type: "class" | "oneonone", present: boolean) => {
-    setActionError("")
-    const res = await authFetch("/api/attendance", {
-      method: "POST",
-      headers: jsonHeaders,
-      body: JSON.stringify({ registrationId, date, type, present }),
-    })
-    if (!res.ok) {
-      setActionError((await res.json()).error ?? "Could not update attendance.")
-    }
-    await loadData()
+  // Toggle a student's present/absent mark for a specific day — flips instantly
+  const markAttendance = (registrationId: string, date: string, type: "class" | "oneonone", present: boolean) => {
+    const field = type === "class" ? "class" : "oneOnOne"
+    const setMark = (value: boolean) =>
+      setRegistrations((list) =>
+        list.map((r) =>
+          r.id === registrationId
+            ? { ...r, attendance: r.attendance.map((d) => (d.date === date ? { ...d, [field]: value } : d)) }
+            : r,
+        ),
+      )
+    return optimistic(
+      () => {
+        setMark(present)
+        return () => setMark(!present)
+      },
+      () =>
+        authFetch("/api/attendance", {
+          method: "POST",
+          headers: jsonHeaders,
+          body: JSON.stringify({ registrationId, date, type, present }),
+        }),
+      "Could not update attendance.",
+    )
   }
 
   const uploadCertificate = async (registrationId: string, file: File) => {
@@ -658,7 +807,7 @@ export default function AdminPage() {
       if (!res.ok) {
         setActionError((await res.json()).error ?? "Certificate upload failed.")
       }
-      await loadData()
+      await reload("certificates")
     } finally {
       setUploadingFor(null)
       const input = fileInputs.current[`cert-${registrationId}`]
@@ -668,8 +817,15 @@ export default function AdminPage() {
 
   const deleteCertificate = async (id: string, studentName: string) => {
     if (!window.confirm(`Delete the certificate of ${studentName}?`)) return
-    await authFetch(`/api/certificates/${id}`, { method: "DELETE" })
-    await loadData()
+    const before = certificates
+    await optimistic(
+      () => {
+        setCertificates((list) => list.filter((c) => c.id !== id))
+        return () => setCertificates(before)
+      },
+      () => authFetch(`/api/certificates/${id}`, { method: "DELETE" }),
+      "Could not delete the certificate.",
+    )
   }
 
   const saveStory = async () => {
@@ -687,13 +843,20 @@ export default function AdminPage() {
     setCreatingStory(false)
     setEditingStoryId(null)
     setStoryForm({ quote: "", name: "", role: "" })
-    await loadData()
+    await reload("stories")
   }
 
   const deleteStory = async (id: string, name: string) => {
     if (!window.confirm(`Delete the story by ${name}?`)) return
-    await authFetch(`/api/testimonials/${id}`, { method: "DELETE" })
-    await loadData()
+    const before = stories
+    await optimistic(
+      () => {
+        setStories((list) => list.filter((st) => st.id !== id))
+        return () => setStories(before)
+      },
+      () => authFetch(`/api/testimonials/${id}`, { method: "DELETE" }),
+      "Could not delete the story.",
+    )
   }
 
   const saveContact = async () => {
@@ -786,6 +949,8 @@ export default function AdminPage() {
   }
 
   const pendingCount = registrations.filter((r) => r.status === "pending").length
+  const newEnquiries = enquiries.filter((e) => e.status === "new").length
+  const shownEnquiries = enquiryFilter === "all" ? enquiries : enquiries.filter((e) => e.status === enquiryFilter)
 
   // ── Dashboard ──────────────────────────────────────────────────
   return (
@@ -794,6 +959,13 @@ export default function AdminPage() {
       userName="Administrator"
       userEmail={session.email}
       navItems={[
+        {
+          key: "enquiries",
+          label: "Enquiries & Demos",
+          icon: Inbox,
+          badge: newEnquiries,
+          description: "Free demo requests and questions from the website form — follow up and track each one.",
+        },
         {
           key: "registrations",
           label: "Registrations",
@@ -850,6 +1022,160 @@ export default function AdminPage() {
       {actionError && (
         <div className="bg-destructive/10 text-destructive rounded-xl px-4 py-3 text-sm mb-4" role="alert">
           {actionError}
+        </div>
+      )}
+
+      {/* ── Enquiries & demo requests ── */}
+      {tab === "enquiries" && (
+        <div className="space-y-4">
+          {enquiriesError && (
+            <div className="bg-accent text-brand-ink rounded-xl px-4 py-3 text-sm" role="status">
+              {enquiriesError}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Filter enquiries">
+            {(
+              [
+                ["all", "All", enquiries.length],
+                ["new", "New", newEnquiries],
+                ["contacted", "Contacted", enquiries.filter((e) => e.status === "contacted").length],
+                ["closed", "Closed", enquiries.filter((e) => e.status === "closed").length],
+              ] as const
+            ).map(([value, label, count]) => (
+              <button
+                key={value}
+                role="tab"
+                aria-selected={enquiryFilter === value}
+                onClick={() => setEnquiryFilter(value)}
+                className={`h-9 px-4 rounded-full text-sm font-medium border transition-colors ${
+                  enquiryFilter === value
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-card border-border hover:border-foreground/30"
+                }`}
+              >
+                {label} <span className="opacity-60">({count})</span>
+              </button>
+            ))}
+          </div>
+
+          {shownEnquiries.length === 0 && !enquiriesError && (
+            <div className="bg-card shadow-sm rounded-2xl p-10 border border-border text-center text-muted-foreground">
+              {enquiries.length === 0
+                ? "No enquiries yet. Demo requests from the website's contact form will appear here."
+                : "Nothing in this filter."}
+            </div>
+          )}
+
+          {shownEnquiries.map((enquiry) => {
+            const digits = enquiry.phone.replace(/[^0-9]/g, "")
+            const waText = encodeURIComponent(
+              `Hi ${enquiry.name.split(" ")[0]}, this is Eleva Academy — thank you for your ${
+                enquiry.kind === "demo" ? "free demo request" : "enquiry"
+              }${enquiry.program ? ` about ${enquiry.program}` : ""}.`,
+            )
+            return (
+              <div key={enquiry.id} className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border">
+                <div className="flex flex-col lg:flex-row lg:items-start gap-4 justify-between">
+                  <div className="min-w-0 space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h3 className="font-semibold">{enquiry.name}</h3>
+                      <span
+                        className={`text-xs font-semibold rounded-full px-2.5 py-1 ${
+                          enquiry.kind === "demo" ? "bg-primary text-white" : "bg-muted text-foreground/80"
+                        }`}
+                      >
+                        {enquiry.kind === "demo" ? "Free demo request" : "Enquiry"}
+                      </span>
+                      {enquiry.program && (
+                        <span className="text-xs font-medium bg-accent text-brand-ink rounded-full px-2.5 py-1">
+                          {enquiry.program}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground break-all">
+                      {enquiry.phone} · {enquiry.email} · {new Date(enquiry.createdAt).toLocaleString()}
+                    </p>
+                    {(enquiry.contactMethod || enquiry.preferredTime) && (
+                      <p className="text-sm">
+                        {enquiry.contactMethod && (
+                          <>
+                            Prefers <strong className="font-semibold">{enquiry.contactMethod === "whatsapp" ? "WhatsApp" : enquiry.contactMethod}</strong>
+                          </>
+                        )}
+                        {enquiry.contactMethod && enquiry.preferredTime && " · "}
+                        {enquiry.preferredTime && (
+                          <>
+                            Best time: <strong className="font-semibold">{enquiry.preferredTime}</strong>
+                          </>
+                        )}
+                      </p>
+                    )}
+                    {enquiry.message && (
+                      <p className="text-sm bg-muted/60 rounded-lg px-3 py-2 whitespace-pre-line">"{enquiry.message}"</p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap lg:flex-nowrap lg:flex-shrink-0">
+                    <a
+                      href={`tel:${enquiry.phone}`}
+                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted/50 transition-colors"
+                      aria-label={`Call ${enquiry.name}`}
+                      title="Call"
+                    >
+                      <Phone className="w-4 h-4" />
+                    </a>
+                    {digits && (
+                      <a
+                        href={`https://wa.me/${digits}?text=${waText}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted/50 transition-colors"
+                        aria-label={`WhatsApp ${enquiry.name}`}
+                        title="WhatsApp"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </a>
+                    )}
+                    <a
+                      href={`mailto:${enquiry.email}`}
+                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted/50 transition-colors"
+                      aria-label={`Email ${enquiry.name}`}
+                      title="Email"
+                    >
+                      <Mail className="w-4 h-4" />
+                    </a>
+                    <label className="sr-only" htmlFor={`status-${enquiry.id}`}>
+                      Status
+                    </label>
+                    <select
+                      id={`status-${enquiry.id}`}
+                      value={enquiry.status}
+                      onChange={(e) => patchEnquiry(enquiry.id, e.target.value as Enquiry["status"])}
+                      className={`h-10 rounded-lg border px-3 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-ring ${
+                        enquiry.status === "new"
+                          ? "bg-accent text-brand-ink border-[#F5A623]/50"
+                          : enquiry.status === "contacted"
+                            ? "bg-green-500/10 text-green-700 border-green-600/30"
+                            : "bg-muted text-muted-foreground border-border"
+                      }`}
+                    >
+                      <option value="new">New</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="closed">Closed</option>
+                    </select>
+                    <button
+                      onClick={() => deleteEnquiry(enquiry.id, enquiry.name)}
+                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                      aria-label={`Delete enquiry from ${enquiry.name}`}
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
         </div>
       )}
 
@@ -1616,7 +1942,7 @@ export default function AdminPage() {
               type="email"
               value={contactForm.email}
               onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-              placeholder="careerofexcellence.learn@gmail.com"
+              placeholder="elevaacadyindia@gmail.com"
             />
           </div>
           <div>
@@ -1630,6 +1956,15 @@ export default function AdminPage() {
             <p className="mt-1 text-xs text-muted-foreground">
               Shown in the header, footer and contact page (call + WhatsApp buttons). Leave empty to hide.
             </p>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Location / address</label>
+            <Input
+              value={contactForm.address ?? ""}
+              onChange={(e) => setContactForm({ ...contactForm, address: e.target.value })}
+              placeholder="Sector 106, Dwarka Expressway, Gurugram, Haryana"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Shown in the footer and on the contact page with a map link.</p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {(

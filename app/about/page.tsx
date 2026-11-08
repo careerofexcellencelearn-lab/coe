@@ -6,7 +6,8 @@ import { ArrowRight, BadgeCheck, GraduationCap, Laptop, Users } from "lucide-rea
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { DEFAULT_ABOUT, type AboutContent } from "@/lib/content"
-import { SiteHeader } from "@/components/site/site-header"
+import { DEMO_HREF, SiteHeader } from "@/components/site/site-header"
+import { WhatsAppButton } from "@/components/site/whatsapp-button"
 import { SiteFooter } from "@/components/site/site-footer"
 import { useContact } from "@/components/site/use-contact"
 
@@ -63,7 +64,7 @@ export default function AboutPage() {
                 style={{ "--d": 4 } as React.CSSProperties}
               >
                 {[
-                  { icon: GraduationCap, label: "10+ years in education & training" },
+                  { icon: GraduationCap, label: "10+ years in education · 8+ years training" },
                   { icon: Laptop, label: "100% live online classes" },
                   { icon: Users, label: "Personal one-on-one coaching" },
                 ].map(({ icon: Icon, label }) => (
@@ -147,11 +148,17 @@ export default function AboutPage() {
                   approach yourself.
                 </p>
                 <Link
-                  href="/#programs"
+                  href={DEMO_HREF}
                   className="mt-5 inline-flex w-full items-center justify-center gap-2 h-11 rounded-full bg-primary text-white text-sm font-semibold hover:bg-[#de7200] transition-colors"
                 >
-                  Explore Programs
+                  Book a Free Demo
                   <ArrowRight className="w-4 h-4" aria-hidden="true" />
+                </Link>
+                <Link
+                  href="/#programs"
+                  className="mt-2.5 inline-flex w-full items-center justify-center h-11 rounded-full border border-white/20 text-sm font-semibold hover:bg-white/10 transition-colors"
+                >
+                  Explore Programs
                 </Link>
               </div>
             </aside>
@@ -160,6 +167,7 @@ export default function AboutPage() {
       </main>
 
       <SiteFooter contact={contact} />
+      <WhatsAppButton phone={contact.phone} />
     </div>
   )
 }

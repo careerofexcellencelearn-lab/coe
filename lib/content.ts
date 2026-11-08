@@ -22,6 +22,7 @@ export const DEFAULT_ABOUT: AboutContent = {
     "Her sessions are live, practical and personal: real workplace scenarios, individual feedback and steady practice — because confidence is built by doing, not just listening.",
   ],
   qualifications: [
+    "Post Graduation in Business Management (PGDM)",
     "Diploma in Teaching Soft Skills & Business Communication",
     "Certification in Human Resources — University of Minnesota",
     "Bachelor's in Commerce — MIT Pune",
@@ -57,6 +58,7 @@ export const DEFAULT_ABOUT: AboutContent = {
 export type ContactContent = {
   email: string
   phone: string
+  address: string
   linkedin: string
   facebook: string
   twitter: string
@@ -65,12 +67,13 @@ export type ContactContent = {
 }
 
 export const DEFAULT_CONTACT: ContactContent = {
-  email: "careerofexcellence.learn@gmail.com",
+  email: "elevaacadyindia@gmail.com",
   phone: "+91 81791 28482",
+  address: "Sector 106, Dwarka Expressway, Gurugram, Haryana",
   linkedin: "https://www.linkedin.com/company/eleva-academy-india/",
   facebook: "",
   twitter: "",
-  instagram: "",
+  instagram: "https://www.instagram.com/elevaacademy_official/",
   youtube: "",
 }
 
@@ -82,6 +85,17 @@ export function withContactDefaults(stored: Partial<ContactContent> | null | und
 /** Phone number as digits only, for tel: and wa.me links */
 export function phoneDigits(phone: string): string {
   return phone.replace(/[^0-9]/g, "")
+}
+
+/** wa.me link with a pre-filled message (empty when no phone is configured) */
+export function whatsappLink(phone: string, message: string): string {
+  const digits = phoneDigits(phone)
+  return digits ? `https://wa.me/${digits}?text=${encodeURIComponent(message)}` : ""
+}
+
+/** Google Maps search link for the academy's address */
+export function mapsLink(address: string): string {
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`
 }
 
 /** Sanitise an incoming contact payload — email must be valid, links must be http(s) or empty */
@@ -101,6 +115,7 @@ export function normalizeContact(body: any): ContactContent {
   return {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email : DEFAULT_CONTACT.email,
     phone: isPhone(phone) ? phone : "",
+    address: cleanText(body?.address, 200),
     linkedin: link(body?.linkedin),
     facebook: link(body?.facebook),
     twitter: link(body?.twitter),

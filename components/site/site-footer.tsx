@@ -1,25 +1,32 @@
 import Link from "next/link"
 import { Mail, MapPin, Phone } from "lucide-react"
-import { phoneDigits, type ContactContent } from "@/lib/content"
-import { BrandMark } from "./site-header"
-import { socialLinks } from "./use-contact"
+import { mapsLink, phoneDigits, type ContactContent } from "@/lib/content"
+import { programHref } from "@/lib/programs"
+import { BrandMark } from "./brand-mark"
+import { socialLinks } from "./social"
 
-export function SiteFooter({ contact, serviceTitles }: { contact: ContactContent; serviceTitles?: string[] }) {
+export function SiteFooter({
+  contact,
+  programs,
+}: {
+  contact: ContactContent
+  programs?: { title: string }[]
+}) {
   const socials = socialLinks(contact)
-  const programs = serviceTitles?.length
-    ? serviceTitles
-    : ["Soft Skills & Business Communication", "IELTS & TOEFL Training"]
+  const programList = programs?.length
+    ? programs
+    : [{ title: "Soft Skills & Business Communication" }, { title: "IELTS & TOEFL Training" }]
 
   return (
     <footer className="bg-[#171412] text-white/70">
-      <div className="container-site py-14 md:py-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.2fr] gap-10">
+      <div className="container-site py-14 md:py-16 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1.3fr] gap-10">
         <div className="space-y-5">
           <Link href="/" aria-label="Eleva Academy — home" className="inline-block">
             <BrandMark light />
           </Link>
           <p className="text-sm leading-relaxed max-w-xs">
-            Live online soft skills, business communication and IELTS/TOEFL training led by Sneha Durgkar — helping
-            students and professionals communicate with confidence.
+            Elevating Communication. Empowering Confidence. Transforming Careers. Live online training led by Sneha
+            Durgkar.
           </p>
           {socials.length > 0 && (
             <div className="flex items-center gap-2">
@@ -29,7 +36,7 @@ export function SiteFooter({ contact, serviceTitles }: { contact: ContactContent
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={label}
+                  aria-label={`Eleva Academy on ${label}`}
                   className="w-10 h-10 rounded-full bg-white/[0.07] flex items-center justify-center text-white hover:bg-primary transition-colors"
                 >
                   <Icon className="w-4 h-4" />
@@ -43,7 +50,7 @@ export function SiteFooter({ contact, serviceTitles }: { contact: ContactContent
           <p className="text-sm font-semibold text-white">Explore</p>
           <ul className="space-y-2.5 text-sm">
             {[
-              ["Programs", "/#programs"],
+              ["Book a Free Demo", "/contact#enquiry"],
               ["About the Trainer", "/about"],
               ["Contact", "/contact"],
               ["Student Login", "/dashboard"],
@@ -60,10 +67,10 @@ export function SiteFooter({ contact, serviceTitles }: { contact: ContactContent
         <div className="space-y-4">
           <p className="text-sm font-semibold text-white">Programs</p>
           <ul className="space-y-2.5 text-sm">
-            {programs.map((title) => (
-              <li key={title}>
-                <Link href="/#programs" className="hover:text-white transition-colors">
-                  {title}
+            {programList.map((program) => (
+              <li key={program.title}>
+                <Link href={programHref(program)} className="hover:text-white transition-colors">
+                  {program.title}
                 </Link>
               </li>
             ))}
@@ -90,10 +97,22 @@ export function SiteFooter({ contact, serviceTitles }: { contact: ContactContent
                 </a>
               </li>
             )}
-            <li className="flex items-start gap-3">
-              <MapPin className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" aria-hidden="true" />
-              100% online · India & worldwide
-            </li>
+            {contact.address && (
+              <li>
+                <a
+                  href={mapsLink(contact.address)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-start gap-3 hover:text-white transition-colors"
+                >
+                  <MapPin className="w-4 h-4 mt-0.5 text-primary flex-shrink-0" aria-hidden="true" />
+                  <span>
+                    {contact.address}
+                    <span className="block text-white/50 mt-0.5">Classes are 100% live online</span>
+                  </span>
+                </a>
+              </li>
+            )}
           </ul>
         </div>
       </div>

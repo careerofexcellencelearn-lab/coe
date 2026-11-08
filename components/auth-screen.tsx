@@ -1,7 +1,7 @@
 import type React from "react"
 import Link from "next/link"
 import { ArrowLeft, Check } from "lucide-react"
-import { BrandMark } from "@/components/site/site-header"
+import { BrandMark } from "@/components/site/brand-mark"
 
 /** Split-screen sign-in layout: brand panel on laptops, form-only on phones */
 export function AuthScreen({
@@ -55,7 +55,7 @@ export function AuthScreen({
           </Link>
           <Link
             href="/"
-            className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="inline-flex items-center gap-1.5 min-h-11 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="w-4 h-4" aria-hidden="true" />
             Back to website

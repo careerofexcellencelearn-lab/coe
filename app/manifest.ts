@@ -2,14 +2,17 @@ import type { MetadataRoute } from "next"
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Eleva Academy — Center of Excellence",
+    name: "Eleva Academy",
     short_name: "Eleva Academy",
     description:
       "Live online soft skills, business communication and IELTS/TOEFL training with Sneha Durgkar.",
     start_url: "/",
     display: "standalone",
     background_color: "#ffffff",
-    theme_color: "#FF8C00",
-    icons: [{ src: "/icon.png", sizes: "512x512", type: "image/png" }],
+    theme_color: "#171412",
+    icons: [
+      { src: "/icon.png", sizes: "192x192", type: "image/png" },
+      { src: "/logo-512.png", sizes: "512x512", type: "image/png" },
+    ],
   }
 }

@@ -4,7 +4,7 @@ import type React from "react"
 import { useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowUpRight, LogOut, Menu, X, type LucideIcon } from "lucide-react"
-import { BrandMark } from "@/components/site/site-header"
+import { BrandMark } from "@/components/site/brand-mark"
 
 export type DashboardNavItem = {
   key: string

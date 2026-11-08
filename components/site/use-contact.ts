@@ -1,12 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Facebook, Instagram, Linkedin, Twitter, Youtube, type LucideIcon } from "lucide-react"
 import { DEFAULT_CONTACT, type ContactContent } from "@/lib/content"
 
 /** Live contact details (admin-editable), starting from the defaults so nothing flashes empty */
-export function useContact(): ContactContent {
-  const [contact, setContact] = useState<ContactContent>(DEFAULT_CONTACT)
+export function useContact(initial: ContactContent = DEFAULT_CONTACT): ContactContent {
+  const [contact, setContact] = useState<ContactContent>(initial)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -25,17 +24,4 @@ export function useContact(): ContactContent {
   }, [])
 
   return contact
-}
-
-export type SocialLink = { icon: LucideIcon; label: string; href: string }
-
-/** Only the socials the admin has filled in — empty ones are hidden, never dead "#" links */
-export function socialLinks(contact: ContactContent): SocialLink[] {
-  return [
-    { icon: Linkedin, label: "LinkedIn", href: contact.linkedin },
-    { icon: Instagram, label: "Instagram", href: contact.instagram },
-    { icon: Youtube, label: "YouTube", href: contact.youtube },
-    { icon: Facebook, label: "Facebook", href: contact.facebook },
-    { icon: Twitter, label: "Twitter", href: contact.twitter },
-  ].filter((link) => link.href)
 }

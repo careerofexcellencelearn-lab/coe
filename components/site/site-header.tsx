@@ -2,38 +2,22 @@
 
 import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowRight, GraduationCap, LogIn, Menu, Phone, X } from "lucide-react"
+import { CalendarCheck, LogIn, Menu, Phone, X } from "lucide-react"
 import { phoneDigits } from "@/lib/content"
+import { BrandMark } from "./brand-mark"
 
-export type SiteSection = "home" | "about" | "contact"
+export { BrandMark }
 
-const navLinks: { key: SiteSection | "programs"; label: string; href: string }[] = [
+export type SiteSection = "home" | "programs" | "about" | "contact"
+
+const navLinks: { key: SiteSection; label: string; href: string }[] = [
   { key: "programs", label: "Programs", href: "/#programs" },
   { key: "about", label: "About", href: "/about" },
   { key: "contact", label: "Contact", href: "/contact" },
 ]
 
-export function BrandMark({ light = false }: { light?: boolean }) {
-  return (
-    <span className="flex items-center gap-2.5">
-      <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#F5A623] to-[#EF7D00] text-white flex items-center justify-center shadow-sm shadow-orange-500/30">
-        <GraduationCap className="w-5 h-5" aria-hidden="true" />
-      </span>
-      <span className="leading-none">
-        <span className={`block text-[17px] font-bold tracking-tight ${light ? "text-white" : ""}`}>
-          eleva<span className="text-primary">.</span>academy
-        </span>
-        <span
-          className={`block text-[10px] font-medium uppercase tracking-[0.18em] mt-1 ${
-            light ? "text-white/60" : "text-muted-foreground"
-          }`}
-        >
-          Center of Excellence
-        </span>
-      </span>
-    </span>
-  )
-}
+/** Where every "Book a Free Demo" button leads (the enquiry form on the contact page) */
+export const DEMO_HREF = "/contact#enquiry"
 
 export function SiteHeader({ active, phone }: { active: SiteSection; phone?: string }) {
   const [open, setOpen] = useState(false)
@@ -100,16 +84,16 @@ export function SiteHeader({ active, phone }: { active: SiteSection; phone?: str
             Student Login
           </Link>
           <Link
-            href="/#programs"
+            href={DEMO_HREF}
             className="inline-flex items-center gap-1.5 h-10 px-5 rounded-full text-sm font-semibold bg-foreground text-background hover:bg-foreground/85 transition-colors"
           >
-            Enroll Now
-            <ArrowRight className="w-4 h-4" aria-hidden="true" />
+            <CalendarCheck className="w-4 h-4" aria-hidden="true" />
+            Book a Free Demo
           </Link>
         </div>
 
         <button
-          className="lg:hidden w-10 h-10 -mr-2 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
+          className="lg:hidden w-11 h-11 -mr-2 rounded-full flex items-center justify-center hover:bg-muted transition-colors"
           onClick={() => setOpen(!open)}
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -120,7 +104,7 @@ export function SiteHeader({ active, phone }: { active: SiteSection; phone?: str
       </div>
 
       {open && (
-        <div id="mobile-menu" className="lg:hidden border-t border-border bg-background">
+        <div id="mobile-menu" className="lg:hidden border-t border-border bg-background max-h-[calc(100dvh-4rem)] overflow-y-auto">
           <nav className="container-site py-4 flex flex-col" aria-label="Mobile">
             {navLinks.map((link) => (
               <Link
@@ -135,7 +119,15 @@ export function SiteHeader({ active, phone }: { active: SiteSection; phone?: str
                 {link.label}
               </Link>
             ))}
-            <div className="grid grid-cols-2 gap-3 pt-4">
+            <Link
+              href={DEMO_HREF}
+              onClick={() => setOpen(false)}
+              className="mt-4 inline-flex items-center justify-center gap-2 h-12 rounded-xl text-sm font-semibold bg-primary text-white"
+            >
+              <CalendarCheck className="w-4 h-4" aria-hidden="true" />
+              Book a Free Demo
+            </Link>
+            <div className="grid grid-cols-2 gap-3 pt-3">
               <Link
                 href="/dashboard"
                 onClick={() => setOpen(false)}
@@ -144,23 +136,24 @@ export function SiteHeader({ active, phone }: { active: SiteSection; phone?: str
                 <LogIn className="w-4 h-4" aria-hidden="true" />
                 Login
               </Link>
-              <Link
-                href="/#programs"
-                onClick={() => setOpen(false)}
-                className="inline-flex items-center justify-center gap-1.5 h-11 rounded-xl text-sm font-semibold bg-foreground text-background"
-              >
-                Enroll Now
-              </Link>
+              {phone ? (
+                <a
+                  href={`tel:+${phoneDigits(phone)}`}
+                  className="inline-flex items-center justify-center gap-2 h-11 rounded-xl text-sm font-semibold border border-border bg-card"
+                >
+                  <Phone className="w-4 h-4 text-primary" aria-hidden="true" />
+                  Call Us
+                </a>
+              ) : (
+                <Link
+                  href="/contact"
+                  onClick={() => setOpen(false)}
+                  className="inline-flex items-center justify-center h-11 rounded-xl text-sm font-semibold border border-border bg-card"
+                >
+                  Contact
+                </Link>
+              )}
             </div>
-            {phone && (
-              <a
-                href={`tel:+${phoneDigits(phone)}`}
-                className="mt-3 inline-flex items-center justify-center gap-2 h-11 text-sm font-medium text-foreground/75"
-              >
-                <Phone className="w-4 h-4 text-primary" aria-hidden="true" />
-                Call us · {phone}
-              </a>
-            )}
           </nav>
         </div>
       )}
