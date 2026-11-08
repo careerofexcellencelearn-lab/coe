@@ -35,6 +35,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { computeSlots, formatTime12 } from "@/lib/time"
 import { DashboardShell } from "@/components/dashboard-shell"
+import { AuthScreen } from "@/components/auth-screen"
 import { type AttendanceDay } from "@/components/attendance-grid"
 import { DEFAULT_ABOUT, DEFAULT_CONTACT, type AboutContent, type ContactContent } from "@/lib/content"
 
@@ -296,7 +297,7 @@ function ServiceForm({
           rows={2}
           value={form.description}
           onChange={(e) => setForm({ ...form, description: e.target.value })}
-          className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+          className="w-full px-3 py-2 bg-input/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
           placeholder="Short description shown on the services card"
         />
       </div>
@@ -306,7 +307,7 @@ function ServiceForm({
           rows={4}
           value={form.objectives}
           onChange={(e) => setForm({ ...form, objectives: e.target.value })}
-          className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+          className="w-full px-3 py-2 bg-input/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
           placeholder={"Master all four modules\nLearn score-boosting strategies"}
         />
       </div>
@@ -513,7 +514,7 @@ export default function AdminPage() {
     const aboutData = (await aboutRes.json()).about
     if (aboutData?.bio?.length) setAboutForm(aboutToForm(aboutData))
     const contactData = (await contactRes.json()).contact
-    if (contactData?.email) setContactForm(contactData)
+    if (contactData?.email) setContactForm({ ...DEFAULT_CONTACT, ...contactData })
   }, [session, authFetch])
 
   useEffect(() => {
@@ -737,62 +738,50 @@ export default function AdminPage() {
   // ── Login screen ───────────────────────────────────────────────
   if (!session) {
     return (
-      <div className="min-h-screen bg-background relative overflow-hidden flex items-center justify-center p-4">
-        <div className="blob-shape w-[500px] h-[500px] -top-40 -left-40" />
-        <div className="blob-shape w-[400px] h-[400px] -bottom-32 -right-32" />
-        <div className="relative z-10 w-full max-w-md">
-          <div className="bg-card/80 backdrop-blur-sm rounded-3xl p-8 md:p-10 border border-border/50">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#F5A623] to-[#FF8C00] text-white flex items-center justify-center mb-6">
-              <ShieldCheck className="w-7 h-7" aria-hidden="true" />
-            </div>
-            <h1 className="text-2xl font-bold mb-1">Admin Dashboard</h1>
-            <p className="text-sm text-muted-foreground mb-6">Eleva Academy — sign in to manage the platform.</p>
-            <form onSubmit={handleLogin} className="space-y-4">
-              <div>
-                <label htmlFor="admin-email" className="block text-sm font-medium mb-1.5">
-                  Email
-                </label>
-                <Input
-                  id="admin-email"
-                  type="email"
-                  autoComplete="email"
-                  value={loginForm.email}
-                  onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
-                  required
-                />
-              </div>
-              <div>
-                <label htmlFor="admin-password" className="block text-sm font-medium mb-1.5">
-                  Password
-                </label>
-                <Input
-                  id="admin-password"
-                  type="password"
-                  autoComplete="current-password"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
-                  required
-                />
-              </div>
-              {loginError && (
-                <p className="text-sm text-destructive" role="alert">
-                  {loginError}
-                </p>
-              )}
-              <Button type="submit" disabled={loggingIn} className="w-full h-11 font-semibold">
-                {loggingIn ? "Signing in…" : "Sign In"}
-              </Button>
-            </form>
-            <Link
-              href="/"
-              className="mt-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-              Back to website
-            </Link>
+      <AuthScreen
+        title="Admin sign in"
+        description="Eleva Academy — sign in to manage the platform."
+        highlights={["Approve registrations", "Mark attendance", "Share materials & certificates", "Edit site content"]}
+      >
+        <form onSubmit={handleLogin} className="space-y-5">
+          <div>
+            <label htmlFor="admin-email" className="block text-sm font-medium mb-1.5">
+              Email
+            </label>
+            <Input
+              id="admin-email"
+              type="email"
+              autoComplete="email"
+              value={loginForm.email}
+              onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+              className="h-12"
+              required
+            />
           </div>
-        </div>
-      </div>
+          <div>
+            <label htmlFor="admin-password" className="block text-sm font-medium mb-1.5">
+              Password
+            </label>
+            <Input
+              id="admin-password"
+              type="password"
+              autoComplete="current-password"
+              value={loginForm.password}
+              onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+              className="h-12"
+              required
+            />
+          </div>
+          {loginError && (
+            <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2" role="alert">
+              {loginError}
+            </p>
+          )}
+          <Button type="submit" disabled={loggingIn} className="w-full h-12 rounded-xl font-semibold text-base">
+            {loggingIn ? "Signing in…" : "Sign In"}
+          </Button>
+        </form>
+      </AuthScreen>
     )
   }
 
@@ -801,18 +790,58 @@ export default function AdminPage() {
   // ── Dashboard ──────────────────────────────────────────────────
   return (
     <DashboardShell
-      brandIcon={ShieldCheck}
-      title="Admin Dashboard"
-      subtitle={session.email}
+      roleLabel="Admin"
+      userName="Administrator"
+      userEmail={session.email}
       navItems={[
-        { key: "registrations", label: "Registrations", icon: Users, badge: pendingCount },
-        { key: "services", label: "Services", icon: BookOpen, badge: services.length },
-        { key: "attendance", label: "Attendance", icon: CalendarCheck },
-        { key: "materials", label: "Materials", icon: FolderOpen, badge: materials.length },
-        { key: "certificates", label: "Certificates", icon: Award, badge: certificates.length },
-        { key: "stories", label: "Student Stories", icon: Quote, badge: stories.length },
-        { key: "about", label: "About Page", icon: FileText },
-        { key: "contactinfo", label: "Contact & Socials", icon: Mail },
+        {
+          key: "registrations",
+          label: "Registrations",
+          icon: Users,
+          badge: pendingCount,
+          description: "Everyone who enrolled — contact them, mark payment and approve access.",
+        },
+        {
+          key: "services",
+          label: "Programs",
+          icon: BookOpen,
+          badge: services.length,
+          description: "The programs shown on the home page, with timings, offers and Zoom links.",
+        },
+        {
+          key: "attendance",
+          label: "Attendance",
+          icon: CalendarCheck,
+          description: "Mark today's group class and one-on-one attendance for approved students.",
+        },
+        {
+          key: "materials",
+          label: "Materials",
+          icon: FolderOpen,
+          badge: materials.length,
+          description: "Upload PDFs, presentations and notes for a program's students.",
+        },
+        {
+          key: "certificates",
+          label: "Certificates",
+          icon: Award,
+          badge: certificates.length,
+          description: "Issue completion certificates to individual students.",
+        },
+        {
+          key: "stories",
+          label: "Student Stories",
+          icon: Quote,
+          badge: stories.length,
+          description: "Testimonials shown on the home page.",
+        },
+        { key: "about", label: "About Page", icon: FileText, description: "The trainer profile on the About page." },
+        {
+          key: "contactinfo",
+          label: "Contact & Socials",
+          icon: Mail,
+          description: "Email, phone and social links used across the website.",
+        },
       ]}
       activeKey={tab}
       onSelect={setTab}
@@ -827,8 +856,28 @@ export default function AdminPage() {
       {/* ── Registrations ── */}
       {tab === "registrations" && (
         <div className="space-y-3">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-3">
+            {[
+              { label: "Total enrolments", value: registrations.length, icon: Users },
+              { label: "Awaiting approval", value: pendingCount, icon: Clock },
+              {
+                label: "Approved students",
+                value: registrations.filter((r) => r.status === "approved").length,
+                icon: Check,
+              },
+              { label: "Paid", value: registrations.filter((r) => r.paid).length, icon: BadgePercent },
+            ].map((stat) => (
+              <div key={stat.label} className="bg-card rounded-2xl border border-border shadow-sm p-4 md:p-5">
+                <div className="w-9 h-9 rounded-lg bg-accent text-brand-ink flex items-center justify-center mb-3">
+                  <stat.icon className="w-4 h-4" aria-hidden="true" />
+                </div>
+                <p className="text-2xl md:text-3xl font-bold tracking-tight">{stat.value}</p>
+                <p className="text-xs md:text-sm text-muted-foreground">{stat.label}</p>
+              </div>
+            ))}
+          </div>
           {registrations.length === 0 && (
-            <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-10 border border-border/50 text-center text-muted-foreground">
+            <div className="bg-card shadow-sm rounded-2xl p-10 border border-border text-center text-muted-foreground">
               No registrations yet. They'll appear here as soon as someone enrolls.
             </div>
           )}
@@ -837,7 +886,7 @@ export default function AdminPage() {
             return (
               <div
                 key={registration.id}
-                className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50"
+                className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border"
               >
                 <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
                   <div className="min-w-0">
@@ -881,7 +930,7 @@ export default function AdminPage() {
                   <div className="flex items-center gap-2 flex-wrap">
                     <a
                       href={`mailto:${registration.email}`}
-                      className="w-10 h-10 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted/50 transition-colors"
+                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted/50 transition-colors"
                       aria-label={`Email ${registration.name}`}
                       title="Email"
                     >
@@ -891,7 +940,7 @@ export default function AdminPage() {
                       <>
                         <a
                           href={`tel:${registration.phone}`}
-                          className="w-10 h-10 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted/50 transition-colors"
+                          className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted/50 transition-colors"
                           aria-label={`Call ${registration.name}`}
                           title="Call"
                         >
@@ -901,7 +950,7 @@ export default function AdminPage() {
                           href={`https://wa.me/${registration.phone.replace(/[^0-9]/g, "")}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-10 h-10 rounded-lg border border-border/50 flex items-center justify-center hover:bg-muted/50 transition-colors"
+                          className="w-10 h-10 rounded-lg border border-border flex items-center justify-center hover:bg-muted/50 transition-colors"
                           aria-label={`WhatsApp ${registration.name}`}
                           title="WhatsApp"
                         >
@@ -938,7 +987,7 @@ export default function AdminPage() {
                     </Button>
                     <button
                       onClick={() => deleteRegistration(registration.id, registration.name)}
-                      className="w-10 h-10 rounded-lg border border-border/50 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                      className="w-10 h-10 rounded-lg border border-border flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
                       aria-label="Delete registration"
                       title="Delete"
                     >
@@ -955,7 +1004,7 @@ export default function AdminPage() {
       {/* ── Services ── */}
       {tab === "services" && (
         <div className="space-y-3">
-          <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50">
+          <div className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border">
             {creating ? (
               <>
                 <h3 className="font-semibold mb-4">New service</h3>
@@ -989,7 +1038,7 @@ export default function AdminPage() {
             return (
               <div
                 key={service.id}
-                className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50"
+                className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border"
               >
                 {editingId === service.id ? (
                   <>
@@ -1080,7 +1129,7 @@ export default function AdminPage() {
                         </Button>
                         <button
                           onClick={() => deleteService(service.id, service.title)}
-                          className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                          className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
                           aria-label={`Delete ${service.title}`}
                           title="Delete"
                         >
@@ -1090,7 +1139,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* One-on-one slot allocation */}
-                    <div className="bg-background/60 rounded-xl p-4 border border-border/50">
+                    <div className="bg-background rounded-xl p-4 border border-border">
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
                         One-on-one slot allocation ({approvedRegs.length} approved student
                         {approvedRegs.length === 1 ? "" : "s"})
@@ -1126,7 +1175,7 @@ export default function AdminPage() {
       {tab === "attendance" && (
         <div className="space-y-3">
           {registrations.filter((r) => r.status === "approved").length === 0 ? (
-            <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-10 border border-border/50 text-center text-muted-foreground">
+            <div className="bg-card shadow-sm rounded-2xl p-10 border border-border text-center text-muted-foreground">
               Attendance appears here once students are approved. Click Present/Absent to mark each day — students see
               this in their dashboard.
             </div>
@@ -1136,7 +1185,7 @@ export default function AdminPage() {
               .map((registration) => (
                 <div
                   key={registration.id}
-                  className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50"
+                  className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border"
                 >
                   <div className="flex items-center gap-2 flex-wrap mb-1">
                     <h3 className="font-semibold">{registration.name}</h3>
@@ -1151,7 +1200,7 @@ export default function AdminPage() {
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border/50">
+                        <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
                           <th className="py-2 pr-4 font-semibold">Date</th>
                           <th className="py-2 pr-4 font-semibold">Group Class</th>
                           <th className="py-2 font-semibold">One-on-One</th>
@@ -1195,7 +1244,7 @@ export default function AdminPage() {
       {tab === "certificates" && (
         <div className="space-y-3">
           {registrations.length === 0 ? (
-            <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-10 border border-border/50 text-center text-muted-foreground">
+            <div className="bg-card shadow-sm rounded-2xl p-10 border border-border text-center text-muted-foreground">
               Certificates can be issued here once students register.
             </div>
           ) : (
@@ -1204,7 +1253,7 @@ export default function AdminPage() {
               return (
                 <div
                   key={registration.id}
-                  className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50"
+                  className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border"
                 >
                   <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
                     <div className="flex items-center gap-3 min-w-0">
@@ -1273,7 +1322,7 @@ export default function AdminPage() {
                       {certificate && (
                         <button
                           onClick={() => deleteCertificate(certificate.id, registration.name)}
-                          className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                          className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
                           aria-label={`Delete certificate of ${registration.name}`}
                           title="Delete certificate"
                         >
@@ -1297,7 +1346,7 @@ export default function AdminPage() {
             return (
               <div
                 key={service.id}
-                className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50"
+                className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border"
               >
                 <div className="flex items-center justify-between gap-4 flex-wrap mb-4">
                   <h3 className="font-semibold text-lg">{service.title}</h3>
@@ -1337,7 +1386,7 @@ export default function AdminPage() {
                       return (
                         <li
                           key={material.id}
-                          className="flex items-center gap-3 bg-background/60 rounded-xl p-3.5 border border-border/50"
+                          className="flex items-center gap-3 bg-background rounded-xl p-3.5 border border-border"
                         >
                           <div className="w-10 h-10 rounded-lg bg-[#F5A623]/15 text-[#B36A00] flex items-center justify-center flex-shrink-0">
                             <MaterialIcon className="w-5 h-5" aria-hidden="true" />
@@ -1358,7 +1407,7 @@ export default function AdminPage() {
                           </a>
                           <button
                             onClick={() => deleteMaterial(material.id, material.name)}
-                            className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
+                            className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors flex-shrink-0"
                             aria-label={`Delete ${material.name}`}
                             title="Delete"
                           >
@@ -1378,7 +1427,7 @@ export default function AdminPage() {
       {/* ── Student Stories ── */}
       {tab === "stories" && (
         <div className="space-y-3">
-          <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50">
+          <div className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border">
             {creatingStory || editingStoryId ? (
               <div className="space-y-4">
                 <h3 className="font-semibold">{editingStoryId ? "Edit story" : "New story"}</h3>
@@ -1388,7 +1437,7 @@ export default function AdminPage() {
                     rows={3}
                     value={storyForm.quote}
                     onChange={(e) => setStoryForm({ ...storyForm, quote: e.target.value })}
-                    className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
+                    className="w-full px-3 py-2 bg-input/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50 resize-none"
                     placeholder="What did the student say?"
                   />
                 </div>
@@ -1442,7 +1491,7 @@ export default function AdminPage() {
           </div>
 
           {stories.map((story) => (
-            <div key={story.id} className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50">
+            <div key={story.id} className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border">
               <div className="flex flex-col lg:flex-row lg:items-center gap-4 justify-between">
                 <div className="min-w-0">
                   <p className="text-sm leading-relaxed mb-2">"{story.quote}"</p>
@@ -1468,7 +1517,7 @@ export default function AdminPage() {
                   </Button>
                   <button
                     onClick={() => deleteStory(story.id, story.name)}
-                    className="w-9 h-9 rounded-lg border border-border/50 flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
+                    className="w-9 h-9 rounded-lg border border-border flex items-center justify-center text-destructive hover:bg-destructive/10 transition-colors"
                     aria-label={`Delete story by ${story.name}`}
                     title="Delete"
                   >
@@ -1483,7 +1532,7 @@ export default function AdminPage() {
 
       {/* ── About Page editor ── */}
       {tab === "about" && (
-        <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50 space-y-4">
+        <div className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border space-y-4">
           <div>
             <h3 className="font-semibold mb-1">Edit the About page</h3>
             <p className="text-sm text-muted-foreground">
@@ -1504,7 +1553,7 @@ export default function AdminPage() {
               rows={8}
               value={aboutForm.bio}
               onChange={(e) => setAboutForm({ ...aboutForm, bio: e.target.value })}
-              className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-input/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <p className="mt-1 text-xs text-muted-foreground">Separate paragraphs with an empty line.</p>
           </div>
@@ -1515,7 +1564,7 @@ export default function AdminPage() {
                 rows={4}
                 value={aboutForm.qualifications}
                 onChange={(e) => setAboutForm({ ...aboutForm, qualifications: e.target.value })}
-                className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 bg-input/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <p className="mt-1 text-xs text-muted-foreground">One per line.</p>
             </div>
@@ -1525,7 +1574,7 @@ export default function AdminPage() {
                 rows={4}
                 value={aboutForm.trainingAreas}
                 onChange={(e) => setAboutForm({ ...aboutForm, trainingAreas: e.target.value })}
-                className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="w-full px-3 py-2 bg-input/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <p className="mt-1 text-xs text-muted-foreground">One per line.</p>
             </div>
@@ -1536,7 +1585,7 @@ export default function AdminPage() {
               rows={6}
               value={aboutForm.experience}
               onChange={(e) => setAboutForm({ ...aboutForm, experience: e.target.value })}
-              className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
+              className="w-full px-3 py-2 bg-input/50 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary/50"
             />
             <p className="mt-1 text-xs text-muted-foreground">
               One role per line, in the format: Job Title | Organisation & dates | Description
@@ -1553,11 +1602,11 @@ export default function AdminPage() {
 
       {/* ── Contact & Socials ── */}
       {tab === "contactinfo" && (
-        <div className="bg-card/60 backdrop-blur-sm rounded-2xl p-5 md:p-6 border border-border/50 space-y-4">
+        <div className="bg-card shadow-sm rounded-2xl p-5 md:p-6 border border-border space-y-4">
           <div>
             <h3 className="font-semibold mb-1">Contact & social links</h3>
             <p className="text-sm text-muted-foreground">
-              The email shows on the "Get in Touch" card; social links power the icons on the home page, footer and
+              The email and phone show in the header, footer and contact page; social links power the icons on the home page, footer and
               contact page. Leave a link empty to hide it.
             </p>
           </div>
@@ -1567,8 +1616,20 @@ export default function AdminPage() {
               type="email"
               value={contactForm.email}
               onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
-              placeholder="hello@elevaacademy.in"
+              placeholder="careerofexcellence.learn@gmail.com"
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">Phone / WhatsApp</label>
+            <Input
+              type="tel"
+              value={contactForm.phone ?? ""}
+              onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })}
+              placeholder="+91 81791 28482"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              Shown in the header, footer and contact page (call + WhatsApp buttons). Leave empty to hide.
+            </p>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {(

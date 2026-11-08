@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server"
 import { getSupabaseAdmin, requireAdminSession } from "@/lib/supabase"
-import { DEFAULT_CONTACT, normalizeContact } from "@/lib/content"
+import { normalizeContact, withContactDefaults } from "@/lib/content"
 
 export const dynamic = "force-dynamic"
 
 export async function GET(request: Request) {
   const { data } = await getSupabaseAdmin().from("site_content").select("value").eq("key", "contact").maybeSingle()
-  const response = NextResponse.json({ contact: data?.value ?? DEFAULT_CONTACT })
+  const response = NextResponse.json({ contact: withContactDefaults(data?.value) })
   if (!request.headers.get("x-auth-token")) {
     response.headers.set("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300")
   }

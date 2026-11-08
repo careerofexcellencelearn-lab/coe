@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Metadata, Viewport } from "next"
 import { Suspense } from "react"
+import { GeistSans } from "geist/font/sans"
 import "./globals.css"
 
 // Set NEXT_PUBLIC_SITE_URL in the environment once the real domain is connected
@@ -56,7 +57,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#FF8C00",
+  themeColor: "#fbf8f4",
 }
 
 const structuredData = {
@@ -94,16 +95,11 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    // suppressHydrationWarning: the inline script below adds class="js" to <html>
-    // before React hydrates, which React would otherwise flag as a mismatch.
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className={GeistSans.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
-        {/* Marks JS as available before first paint — the hero entrance CSS
-            (.hero-pending) only hides content when this class is present. */}
-        <script dangerouslySetInnerHTML={{ __html: `document.documentElement.classList.add("js")` }} />
         <link rel="preload" as="image" href="/sneha.webp" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-        <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+        <Suspense fallback={null}>{children}</Suspense>
       </body>
     </html>
   )

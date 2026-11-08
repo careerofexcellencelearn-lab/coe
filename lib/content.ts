@@ -1,5 +1,5 @@
 // Shared content types and defaults — safe for both server and client
-import { cleanText } from "./validate"
+import { cleanText, isPhone } from "./validate"
 
 export type ExperienceEntry = { title: string; org: string; description: string }
 
@@ -56,6 +56,7 @@ export const DEFAULT_ABOUT: AboutContent = {
 
 export type ContactContent = {
   email: string
+  phone: string
   linkedin: string
   facebook: string
   twitter: string
@@ -64,12 +65,23 @@ export type ContactContent = {
 }
 
 export const DEFAULT_CONTACT: ContactContent = {
-  email: "hello@elevaacademy.in",
-  linkedin: "",
+  email: "careerofexcellence.learn@gmail.com",
+  phone: "+91 81791 28482",
+  linkedin: "https://www.linkedin.com/company/eleva-academy-india/",
   facebook: "",
   twitter: "",
   instagram: "",
   youtube: "",
+}
+
+/** Fill fields missing from older stored rows (saved before phone existed) with defaults */
+export function withContactDefaults(stored: Partial<ContactContent> | null | undefined): ContactContent {
+  return { ...DEFAULT_CONTACT, ...(stored ?? {}) }
+}
+
+/** Phone number as digits only, for tel: and wa.me links */
+export function phoneDigits(phone: string): string {
+  return phone.replace(/[^0-9]/g, "")
 }
 
 /** Sanitise an incoming contact payload — email must be valid, links must be http(s) or empty */
@@ -85,8 +97,10 @@ export function normalizeContact(body: any): ContactContent {
     }
   }
   const email = cleanText(body?.email, 320).toLowerCase()
+  const phone = cleanText(body?.phone, 30)
   return {
     email: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email) ? email : DEFAULT_CONTACT.email,
+    phone: isPhone(phone) ? phone : "",
     linkedin: link(body?.linkedin),
     facebook: link(body?.facebook),
     twitter: link(body?.twitter),

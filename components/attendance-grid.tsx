@@ -39,7 +39,7 @@ export function AttendanceGrid({ days }: { days: AttendanceDay[] }) {
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border/50">
+          <tr className="text-left text-xs uppercase tracking-wider text-muted-foreground border-b border-border">
             <th className="py-2 pr-4 font-semibold">Date</th>
             <th className="py-2 pr-4 font-semibold">Group Class</th>
             <th className="py-2 font-semibold">One-on-One</th>
@@ -49,7 +49,7 @@ export function AttendanceGrid({ days }: { days: AttendanceDay[] }) {
           {days.map((day) => {
             const isToday = day.date === today
             return (
-              <tr key={day.date} className="border-b border-border/30 last:border-0">
+              <tr key={day.date} className="border-b border-border/70 last:border-0">
                 <td className="py-2.5 pr-4 whitespace-nowrap">
                   {new Date(day.date + "T00:00:00").toLocaleDateString(undefined, {
                     weekday: "short",

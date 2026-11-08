@@ -1,117 +1,185 @@
 "use client"
 
 import type React from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
-import { ArrowLeft, LogOut, type LucideIcon } from "lucide-react"
-import { Button } from "@/components/ui/button"
+import { ArrowUpRight, LogOut, Menu, X, type LucideIcon } from "lucide-react"
+import { BrandMark } from "@/components/site/site-header"
 
 export type DashboardNavItem = {
   key: string
   label: string
   icon: LucideIcon
   badge?: number
+  /** One line shown under the page title when this item is active */
+  description?: string
 }
 
 export function DashboardShell({
-  brandIcon: BrandIcon,
-  title,
-  subtitle,
+  roleLabel,
+  userName,
+  userEmail,
   navItems,
   activeKey,
   onSelect,
   onLogout,
   children,
 }: {
-  brandIcon: LucideIcon
-  title: string
-  subtitle: string
+  roleLabel: string
+  userName: string
+  userEmail: string
   navItems: DashboardNavItem[]
   activeKey: string
   onSelect: (key: string) => void
   onLogout: () => void
   children: React.ReactNode
 }) {
-  return (
-    <div className="min-h-screen bg-background relative overflow-hidden">
-      <div className="blob-shape w-[500px] h-[500px] -top-40 -left-40" />
-      <div className="blob-shape w-[400px] h-[400px] -bottom-32 -right-32" />
+  const [drawerOpen, setDrawerOpen] = useState(false)
+  const active = navItems.find((item) => item.key === activeKey) ?? navItems[0]
 
-      <div className="relative z-10 p-4 md:p-6 max-w-7xl mx-auto">
-        <div className="flex flex-col lg:flex-row gap-4 md:gap-6 items-start">
-          {/* Sidebar */}
-          <aside className="w-full lg:w-64 lg:flex-shrink-0 lg:sticky lg:top-6">
-            <div className="bg-card/80 backdrop-blur-sm rounded-2xl border border-border/50 p-4 md:p-5 flex flex-col gap-5">
-              <div className="flex items-center gap-3">
-                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-[#F5A623] to-[#FF8C00] text-white flex items-center justify-center flex-shrink-0">
-                  <BrandIcon className="w-5 h-5" aria-hidden="true" />
-                </div>
-                <div className="leading-tight min-w-0">
-                  <p className="text-sm font-bold truncate">{title}</p>
-                  <p className="text-[11px] text-muted-foreground truncate">{subtitle}</p>
-                </div>
-              </div>
+  // Lock page scroll behind the mobile drawer; close it with Escape
+  useEffect(() => {
+    if (!drawerOpen) return
+    const previous = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setDrawerOpen(false)
+    window.addEventListener("keydown", onKey)
+    return () => {
+      document.body.style.overflow = previous
+      window.removeEventListener("keydown", onKey)
+    }
+  }, [drawerOpen])
 
-              <nav className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible -mx-1 px-1" aria-label="Dashboard navigation">
-                {navItems.map((item) => (
-                  <button
-                    key={item.key}
-                    onClick={() => onSelect(item.key)}
-                    className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium whitespace-nowrap transition-colors flex-shrink-0 lg:w-full ${
-                      activeKey === item.key
-                        ? "bg-foreground text-background"
-                        : "hover:bg-muted/60 text-foreground/80"
+  const select = (key: string) => {
+    onSelect(key)
+    setDrawerOpen(false)
+    window.scrollTo({ top: 0 })
+  }
+
+  const sidebar = (
+    <div className="flex flex-col h-full">
+      <div className="h-16 px-5 flex items-center justify-between border-b border-border">
+        <Link href="/" aria-label="Eleva Academy — website">
+          <BrandMark />
+        </Link>
+        <button
+          className="lg:hidden w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted"
+          onClick={() => setDrawerOpen(false)}
+          aria-label="Close menu"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="px-3 pt-5 flex-1 overflow-y-auto">
+        <p className="px-3 mb-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          {roleLabel}
+        </p>
+        <nav className="flex flex-col gap-0.5" aria-label="Dashboard navigation">
+          {navItems.map((item) => {
+            const isActive = item.key === active.key
+            return (
+              <button
+                key={item.key}
+                onClick={() => select(item.key)}
+                aria-current={isActive ? "page" : undefined}
+                className={`group flex items-center gap-3 px-3 h-11 rounded-xl text-sm font-medium text-left transition-colors ${
+                  isActive ? "bg-accent text-foreground" : "text-foreground/70 hover:bg-muted hover:text-foreground"
+                }`}
+              >
+                <span
+                  className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors ${
+                    isActive ? "bg-primary text-white shadow-sm shadow-orange-500/30" : "bg-muted text-foreground/60"
+                  }`}
+                >
+                  <item.icon className="w-4 h-4" aria-hidden="true" />
+                </span>
+                <span className="flex-1 truncate">{item.label}</span>
+                {item.badge !== undefined && item.badge > 0 && (
+                  <span
+                    className={`text-[11px] font-bold rounded-full min-w-6 h-6 px-1.5 flex items-center justify-center ${
+                      isActive ? "bg-primary text-white" : "bg-muted text-foreground/70"
                     }`}
-                    aria-current={activeKey === item.key ? "page" : undefined}
                   >
-                    <item.icon className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
-                    {item.label}
-                    {item.badge !== undefined && item.badge > 0 && (
-                      <span
-                        className={`ml-auto text-[11px] font-bold rounded-full px-2 py-0.5 ${
-                          activeKey === item.key ? "bg-background/20 text-background" : "bg-[#F5A623]/20 text-[#B36A00]"
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
-                  </button>
-                ))}
-              </nav>
+                    {item.badge}
+                  </span>
+                )}
+              </button>
+            )
+          })}
+        </nav>
+      </div>
 
-              <div className="hidden lg:block border-t border-border/50 pt-4 space-y-1">
-                <Link
-                  href="/"
-                  className="flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium text-foreground/80 hover:bg-muted/60 transition-colors"
-                >
-                  <ArrowLeft className="w-4 h-4" aria-hidden="true" />
-                  Back to website
-                </Link>
-                <Button
-                  variant="ghost"
-                  onClick={onLogout}
-                  className="w-full justify-start gap-3 px-3.5 text-destructive hover:text-destructive hover:bg-destructive/10"
-                >
-                  <LogOut className="w-4 h-4" aria-hidden="true" />
-                  Logout
-                </Button>
-              </div>
-
-              {/* Mobile logout row */}
-              <div className="flex lg:hidden items-center justify-between border-t border-border/50 pt-3">
-                <Link href="/" className="text-sm font-medium text-muted-foreground hover:text-foreground">
-                  ← Website
-                </Link>
-                <Button variant="ghost" size="sm" onClick={onLogout} className="gap-2 text-destructive hover:text-destructive">
-                  <LogOut className="w-4 h-4" aria-hidden="true" />
-                  Logout
-                </Button>
-              </div>
-            </div>
-          </aside>
-
-          {/* Content */}
-          <main className="flex-1 min-w-0 w-full">{children}</main>
+      <div className="p-3 border-t border-border space-y-1">
+        <div className="flex items-center gap-3 px-3 py-2.5">
+          <span
+            className="w-9 h-9 rounded-full bg-foreground text-background font-semibold text-sm flex items-center justify-center flex-shrink-0"
+            aria-hidden="true"
+          >
+            {(userName || userEmail || "?").charAt(0).toUpperCase()}
+          </span>
+          <span className="min-w-0 leading-tight">
+            <span className="block text-sm font-semibold truncate">{userName}</span>
+            <span className="block text-xs text-muted-foreground truncate">{userEmail}</span>
+          </span>
         </div>
+        <button
+          onClick={onLogout}
+          className="w-full flex items-center gap-3 px-3 h-10 rounded-xl text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors"
+        >
+          <LogOut className="w-4 h-4" aria-hidden="true" />
+          Logout
+        </button>
+      </div>
+    </div>
+  )
+
+  return (
+    <div className="min-h-screen bg-background">
+      {/* Desktop sidebar */}
+      <aside className="hidden lg:block fixed inset-y-0 left-0 w-64 bg-card border-r border-border z-40">{sidebar}</aside>
+
+      {/* Mobile drawer */}
+      {drawerOpen && (
+        <div className="lg:hidden fixed inset-0 z-50" role="dialog" aria-modal="true" aria-label="Dashboard menu">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDrawerOpen(false)} />
+          <aside className="absolute inset-y-0 left-0 w-[82%] max-w-[300px] bg-card shadow-2xl animate-in slide-in-from-left duration-200">
+            {sidebar}
+          </aside>
+        </div>
+      )}
+
+      <div className="lg:pl-64">
+        {/* Top bar */}
+        <header className="sticky top-0 z-30 bg-background/95 backdrop-blur-md border-b border-border">
+          <div className="h-16 px-4 md:px-8 flex items-center gap-3">
+            <button
+              className="lg:hidden w-10 h-10 -ml-2 rounded-full flex items-center justify-center hover:bg-muted"
+              onClick={() => setDrawerOpen(true)}
+              aria-label="Open menu"
+            >
+              <Menu className="w-5 h-5" />
+            </button>
+            <div className="min-w-0 flex-1">
+              <p className="text-base md:text-lg font-semibold truncate">{active.label}</p>
+            </div>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full border border-border bg-card text-sm font-medium hover:border-foreground/25 transition-colors"
+            >
+              <span className="hidden sm:inline">View website</span>
+              <span className="sm:hidden">Website</span>
+              <ArrowUpRight className="w-4 h-4" aria-hidden="true" />
+            </Link>
+          </div>
+        </header>
+
+        <main className="px-4 md:px-8 py-6 md:py-8 max-w-6xl">
+          {active.description && (
+            <p className="text-sm md:text-base text-muted-foreground mb-6 max-w-2xl">{active.description}</p>
+          )}
+          {children}
+        </main>
       </div>
     </div>
   )
